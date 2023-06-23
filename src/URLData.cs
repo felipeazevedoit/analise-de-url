@@ -6,6 +6,8 @@ namespace ReadURLsRequestResponse
     {
         public string? Url { get; set; }
         public HttpStatusCode StatusCode { get; set; }
-        public bool Ativa { get; set; }
+        public string? StatusDescription { get; set; }
+        public bool Active { get; set; }
+
     }
 }

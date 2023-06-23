@@ -8,7 +8,7 @@ namespace ReadURLsRequestResponse
         {
             foreach (var urlData in urls)
             {
-                Console.WriteLine($"URL: {urlData.Url} | StatusCode: {urlData.StatusCode} | Ativa: {urlData.Ativa}");
+                Console.WriteLine($"URL: {urlData.Url} | StatusCode: {urlData.StatusCode} | Active: {urlData.Active} | Description: {urlData.StatusDescription}");
             }
         }
 
@@ -40,7 +40,7 @@ namespace ReadURLsRequestResponse
             foreach (URLData urlData in urls)
             {
                 if (urlData.StatusCode != HttpStatusCode.OK)
-                    Console.WriteLine($"URL: {urlData.Url} | StatusCode: {urlData.StatusCode} | Ativa: {urlData.Ativa}");
+                    Console.WriteLine($"URL: {urlData.Url} | StatusCode: {urlData.StatusCode} | Active: {urlData.Active} | Description: {urlData.StatusDescription}");
             }
         }
 
