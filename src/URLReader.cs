@@ -15,19 +15,26 @@ namespace ReadURLsRequestResponse
 
         public static string? GetValidUrl(string url)
         {
-            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+            //if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri))
+            //{
+            //    return null;
+            //}
+
+            if(url == null)
             {
                 return null;
             }
 
             // Verifica se o esquema "http" não está definido na URL
-            if (string.IsNullOrWhiteSpace(uri.Scheme) || !uri.Scheme.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                // Adiciona o esquema "http" à URL
-                return "http://" + url;
-            }
+            //if (string.IsNullOrWhiteSpace(uri.Scheme) || !uri.Scheme.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            //{
+            //    // Adiciona o esquema "http" à URL
+            //    return "http://" + url;
+            //}
 
-            return url;
+            url = url.Replace("\r\n", string.Empty); 
+
+           return "http://" + url;
         }
 
 
@@ -51,14 +58,27 @@ namespace ReadURLsRequestResponse
                         }
                         else
                         {
-                            var response = WebRequest.Create(httpUrl).GetResponse() as HttpWebResponse;
+                            
+                                var responseRequest = WebRequest.Create(httpUrl).GetResponse();
+                            if (responseRequest is not null)
+                            {
+                                HttpWebResponse response = responseRequest as HttpWebResponse;
+                                urlData.Url = url;
+                                urlData.StatusCode = response.StatusCode;
+                                urlData.Active = true;
+                                urlData.StatusDescription = response.StatusDescription;
+                                response.Close();
+                            }
+                            else
+                            {
+                                urlData.StatusCode = HttpStatusCode.BadRequest;
 
-                            urlData.Url = url;
-                            urlData.StatusCode = response.StatusCode;
-                            urlData.Active = true;
-                            urlData.StatusDescription = response.StatusDescription;
+                                urlData.Active = false;
+                                urlData.Url = url;
+                                urlData.StatusDescription = "BadRequest";
+                            }
 
-                            response.Close();
+
                         }
                       
                     }
