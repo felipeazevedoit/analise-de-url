@@ -35,7 +35,7 @@ class Program
             {
 
                 Console.WriteLine("Gerando Relatórios");
-                FilePatch.GenerateTablePDF(readers, directory);
+                FileData.GenerateTablePDF(URLData.FilterDuplicateURLs(readers), directory);
 
               
                 Console.WriteLine("\nMétodo concluído.");

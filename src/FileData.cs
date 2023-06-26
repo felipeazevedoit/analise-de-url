@@ -35,53 +35,46 @@ namespace ReadURLsRequestResponse
             return URLs;
         }
 
-        public void GenerateTablePDF(List<URLData> dataList, string outputPath)
+        public static void GenerateTablePDF(List<URLData> dataList, string outputPath)
         {
-            var document = new iTextSharp.text.Document();
-            document.SetPageSize(iTextSharp.text.PageSize.A4);
-            document.SetPageSize(iTextSharp.text.PageSize.A4.Rotate());
+            var document = new Document();
+            document.SetPageSize(PageSize.A4);
+            document.SetPageSize(PageSize.A4.Rotate());
 
-            string fullName = Path.Combine(outputPath, DateTime.Now.ToString("yyyyMMddHHmmssfff")+".pdf");
+            string fullName = Path.Combine(outputPath, DateTime.Now.ToString("yyyyMMddHHmmssfff") + ".pdf");
             var writer = PdfWriter.GetInstance(document, new FileStream(fullName, FileMode.Create));
-
-            //var writer = PdfWriter.GetInstance(document, new FileStream(outputPath, FileMode.Create));
 
             document.Open();
 
             // Criação da tabela com 4 colunas
             var table = new PdfPTable(4);
 
-            //// Define a largura das colunas
-            //float[] columnWidths = { 6f, 3f, 3f };
-            //table.SetWidths(columnWidths);
-
-
             // Adiciona o cabeçalho da tabela
             AddCell(table, "URL", true);
             AddCell(table, "Status Code", true);
             AddCell(table, "Status Description", true);
             AddCell(table, "Active", true);
-   
 
-            // Preenche a tabela com os dados da lista de objetos
-            foreach (URLData data in dataList)
+            // Preenche a tabela com os dados da lista de objetos usando processamento paralelo
+            Parallel.ForEach(dataList, data =>
             {
 
+                Console.WriteLine(data.Url + "    " + data.StatusCode.ToString());
+                
                 AddCell(table, data.Url ?? "", false);
                 AddCell(table, data.StatusCode.ToString(), false);
                 AddCell(table, data.StatusDescription ?? "", false);
                 AddCell(table, data.Active.ToString(), false);
-
-            }
+            });
 
             // Adiciona a tabela ao documento
             document.Add(table);
 
-
-
             // Fechamento do documento
             document.Close();
         }
+
+     
 
         public static void AddCell(PdfPTable table, string content, bool isHeader)
         {
