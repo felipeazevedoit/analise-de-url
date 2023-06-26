@@ -5,6 +5,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml;
 using iTextSharp.text;
+using DocumentFormat.OpenXml.Bibliography;
 
 namespace ReadURLsRequestResponse
 {
@@ -25,6 +26,11 @@ namespace ReadURLsRequestResponse
             {
                 string fileContent = System.IO.File.ReadAllText(FilePath);
                 string[] urlArray = fileContent.Split(',');
+                List<string> urls = new List<string>();
+                foreach (var item in urlArray)
+                {
+                    urls.Add(item.Replace(@"\r\", "").Replace(" ","").Replace(@"\","").Replace('"', '\'').Replace(",",""));
+                }
 
                 URLs.AddRange(urlArray);
             }
