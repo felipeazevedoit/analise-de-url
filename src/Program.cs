@@ -69,6 +69,8 @@ class Program
     {
         List<URLData> urlDataList = new();
         string[] urls = File.ReadAllText(filePath).Split(',');
+        for (int i = 0; i < urls.Length; i++)
+            urls[i] = urls[i].Replace("\r", string.Empty);
 
         await Task.WhenAll(urls.Where(url => !string.IsNullOrWhiteSpace(url)).Select(async url =>
         {

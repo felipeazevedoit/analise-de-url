@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Text.RegularExpressions;
 
 namespace ReadURLsRequestResponse
 {
@@ -20,11 +21,13 @@ namespace ReadURLsRequestResponse
             {
                 if (!string.IsNullOrEmpty(data.Url) && !uniqueUrls.Contains(data.Url))
                 {
+                    data.Url = Regex.Replace(data.Url, @"\r|\n|\t", string.Empty);
                     uniqueUrls.Add(data.Url);
                     filteredList.Add(data);
                 }
             }
 
+            
             return filteredList;
         }
 
