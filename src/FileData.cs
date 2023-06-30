@@ -26,7 +26,7 @@ namespace ReadURLsRequestResponse
             {
                 string fileContent = System.IO.File.ReadAllText(FilePath);
                 string[] urlArray = fileContent.Split(',');
-                List<string> urls = new List<string>();
+                List<string> urls = new();
                 foreach (var item in urlArray)
                 {
                     urls.Add(item.Replace(@"\r\", "").Replace(" ","").Replace(@"\","").Replace('"', '\'').Replace(",",""));
@@ -85,19 +85,21 @@ namespace ReadURLsRequestResponse
         public static void AddCell(PdfPTable table, string content, bool isHeader)
         {
             // Cria a célula com estilo diferente para o cabeçalho
-            PdfPCell cell = new PdfPCell(new Phrase(content));
-            cell.Padding = 5;
-            cell.HorizontalAlignment = isHeader ? Element.ALIGN_CENTER : Element.ALIGN_LEFT;
-            cell.BackgroundColor = isHeader ? BaseColor.LIGHT_GRAY : BaseColor.WHITE;
+            PdfPCell cell = new(new Phrase(content))
+            {
+                Padding = 5,
+                HorizontalAlignment = isHeader ? Element.ALIGN_CENTER : Element.ALIGN_LEFT,
+                BackgroundColor = isHeader ? BaseColor.LIGHT_GRAY : BaseColor.WHITE
+            };
 
             // Adiciona a célula à tabela
             table.AddCell(cell);
         }
 
-        public void WriteExcelFiles(List<URLData> dataList, string outputDirectory)
+        public static void WriteExcelFiles(List<URLData> dataList, string outputDirectory)
         {
             // Agrupa os objetos por StatusCode
-            Dictionary<HttpStatusCode, List<URLData>> dataByStatusCode = new Dictionary<HttpStatusCode, List<URLData>>();
+            Dictionary<HttpStatusCode, List<URLData>> dataByStatusCode = new();
 
             foreach (URLData data in dataList)
             {
@@ -122,45 +124,43 @@ namespace ReadURLsRequestResponse
                 string filePath = Path.Combine(outputDirectory, fileName);
 
                 // Criação do arquivo do Excel
-                using (SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
+                using SpreadsheetDocument spreadsheetDocument = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook);
+                WorkbookPart workbookPart = spreadsheetDocument.AddWorkbookPart();
+                workbookPart.Workbook = new Workbook();
+
+                WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+                worksheetPart.Worksheet = new Worksheet(new SheetData());
+
+                Sheets sheets = spreadsheetDocument.WorkbookPart.Workbook.AppendChild(new Sheets());
+                Sheet sheet = new() { Id = spreadsheetDocument.WorkbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Dados" };
+                sheets.Append(sheet);
+
+                SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
+
+                // Escreve os cabeçalhos das colunas
+                Row headerRow = new();
+                headerRow.Append(CreateCell("URL"));
+                headerRow.Append(CreateCell("Status Code"));
+                headerRow.Append(CreateCell("Status Description"));
+                headerRow.Append(CreateCell("Active"));
+                sheetData.Append(headerRow);
+
+                // Escreve os dados na planilha
+                foreach (URLData data in statusDataList)
                 {
-                    WorkbookPart workbookPart = spreadsheetDocument.AddWorkbookPart();
-                    workbookPart.Workbook = new Workbook();
-
-                    WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-                    worksheetPart.Worksheet = new Worksheet(new SheetData());
-
-                    Sheets sheets = spreadsheetDocument.WorkbookPart.Workbook.AppendChild(new Sheets());
-                    Sheet sheet = new Sheet() { Id = spreadsheetDocument.WorkbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Dados" };
-                    sheets.Append(sheet);
-
-                    SheetData sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>();
-
-                    // Escreve os cabeçalhos das colunas
-                    Row headerRow = new Row();
-                    headerRow.Append(CreateCell("URL"));
-                    headerRow.Append(CreateCell("Status Code"));
-                    headerRow.Append(CreateCell("Status Description"));
-                    headerRow.Append(CreateCell("Active"));
-                    sheetData.Append(headerRow);
-
-                    // Escreve os dados na planilha
-                    foreach (URLData data in statusDataList)
-                    {
-                        Row dataRow = new Row();
-                        dataRow.Append(CreateCell(data.Url ?? ""));
-                        dataRow.Append(CreateCell(((int)data.StatusCode).ToString()));
-                        dataRow.Append(CreateCell(data.StatusDescription ?? ""));
-                        dataRow.Append(CreateCell(data.Active.ToString()));
-                        sheetData.Append(dataRow);
-                    }
-
-                    worksheetPart.Worksheet.Save();
+                    Row dataRow = new();
+                    dataRow.Append(CreateCell(data.Url ?? ""));
+                    dataRow.Append(CreateCell(((int)data.StatusCode).ToString()));
+                    dataRow.Append(CreateCell(data.StatusDescription ?? ""));
+                    dataRow.Append(CreateCell(data.Active.ToString()));
+                    sheetData.Append(dataRow);
                 }
+
+                worksheetPart.Worksheet.Save();
             }
         }
 
-        private Cell CreateCell(string cellValue)
+        private static Cell CreateCell(string cellValue)
         {
             return new Cell(new InlineString(cellValue));
         }

@@ -12,6 +12,10 @@ namespace ReadURLsRequestResponse
             Urls = new List<URLData>();
         }
 
+        public URLReader()
+        {
+                Urls = new List<URLData>();
+        }
 
         public static string? GetValidUrl(string url)
         {
@@ -26,12 +30,11 @@ namespace ReadURLsRequestResponse
             return "http://" + url;
         }
 
-
         public List<URLData> Read()
         {
             foreach (string url in UrlString)
             {
-                if (url != "")
+                if (!string.IsNullOrEmpty(url))
                 {
                     var urlData = new URLData();
 
@@ -47,52 +50,121 @@ namespace ReadURLsRequestResponse
                         }
                         else
                         {
+                            using var client = new HttpClient();
+                            var response = client.GetAsync(httpUrl).Result;
 
-                            var responseRequest = WebRequest.Create(httpUrl).GetResponse();
-                            if (responseRequest is not null)
-                            {
-                                HttpWebResponse response = responseRequest as HttpWebResponse;
-                                urlData.Url = url;
-                                urlData.StatusCode = response.StatusCode;
-                                urlData.Active = true;
-                                urlData.StatusDescription = response.StatusDescription;
-                                response.Close();
-                            }
-                            else
-                            {
-                                urlData.StatusCode = HttpStatusCode.BadRequest;
-
-                                urlData.Active = false;
-                                urlData.Url = url;
-                                urlData.StatusDescription = "BadRequest";
-                            }
-
-
+                            urlData.Url = url;
+                            urlData.StatusCode = response.StatusCode;
+                            urlData.Active = true;
+                            urlData.StatusDescription = response.ReasonPhrase;
                         }
 
                     }
-                    catch (WebException ex)
+                    catch (Exception ex)
                     {
-                        HttpWebResponse errorResponse = (HttpWebResponse)ex.Response;
-
-                        if (errorResponse != null)
-                            urlData.StatusCode = errorResponse.StatusCode;
-                        else
-                            urlData.StatusCode = HttpStatusCode.BadRequest;
-
-
+                        urlData.StatusCode = HttpStatusCode.BadRequest;
                         urlData.Active = false;
                         urlData.Url = url;
                         urlData.StatusDescription = ex.Message;
                     }
                     Urls.Add(urlData);
                 }
-
             }
             return OrderStatusCode(Urls);
         }
 
-        public List<URLData> OrderStatusCode(List<URLData> urls)
+        public async Task<List<URLData>> ReadAsync()
+        {
+            var tasks = new List<Task<URLData>>();
+
+            foreach (string url in UrlString)
+            {
+                if (!string.IsNullOrEmpty(url))
+                {
+                    tasks.Add(ProcessUrlAsync(url));
+                }
+            }
+
+            var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+            var orderedResults = OrderStatusCode(results.ToList());
+
+            return orderedResults;
+        }
+
+        public static async Task<URLData> ReadAsync(string url)
+        {
+            var urlData = new URLData();
+
+            try
+            {
+                var httpUrl = GetValidUrl(url);
+                if (httpUrl is null)
+                {
+                    urlData.StatusCode = HttpStatusCode.BadRequest;
+                    urlData.Active = false;
+                    urlData.Url = url;
+                    urlData.StatusDescription = "URL Inválida";
+                }
+                else
+                {
+                    using var client = new HttpClient();
+                    var response = await client.GetAsync(httpUrl);
+
+                    urlData.Url = url;
+                    urlData.StatusCode = response.StatusCode;
+                    urlData.Active = true;
+                    urlData.StatusDescription = response.ReasonPhrase;
+                }
+            }
+            catch (Exception ex)
+            {
+                urlData.StatusCode = HttpStatusCode.BadRequest;
+                urlData.Active = false;
+                urlData.Url = url;
+                urlData.StatusDescription = ex.Message;
+            }
+
+            return urlData;
+        }
+
+        private static async Task<URLData> ProcessUrlAsync(string url)
+        {
+            var urlData = new URLData();
+
+            try
+            {
+                var httpUrl = GetValidUrl(url);
+                if (httpUrl is null)
+                {
+                    urlData.StatusCode = HttpStatusCode.BadRequest;
+                    urlData.Active = false;
+                    urlData.Url = url;
+                    urlData.StatusDescription = "URL Inválida";
+                }
+                else
+                {
+                    using var client = new HttpClient();
+                    var response = await client.GetAsync(httpUrl).ConfigureAwait(false);
+
+                    urlData.Url = url;
+                    urlData.StatusCode = response.StatusCode;
+                    urlData.Active = true;
+                    urlData.StatusDescription = response.ReasonPhrase;
+                }
+            }
+            catch (Exception ex)
+            {
+                urlData.StatusCode = HttpStatusCode.BadRequest;
+                urlData.Active = false;
+                urlData.Url = url;
+                urlData.StatusDescription = ex.Message;
+            }
+
+            return urlData;
+        }
+
+      
+        public static List<URLData> OrderStatusCode(List<URLData> urls)
         {
             urls.Sort((x, y) => x.StatusCode.CompareTo(y.StatusCode));
             return urls;

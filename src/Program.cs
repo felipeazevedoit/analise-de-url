@@ -1,107 +1,84 @@
 ﻿using ReadURLsRequestResponse;
 using System;
-using System.Threading;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 class Program
 {
-
-
-    static void Main()
+    static async Task Main()
     {
-        string directory = GetDirectory();
-        string fileName = GetFileName();
+        string filePath = GetFilePath();
 
-        while (!ValidateFile(directory, fileName))
+        while (!ValidateFile(filePath))
         {
-            Console.WriteLine("O arquivo fornecido não é válido. Por favor, forneça o diretório e o nome do arquivo novamente.");
-            directory = GetDirectory();
-            fileName = GetFileName();
+            Console.WriteLine("O arquivo fornecido não é válido. Por favor, forneça o caminho do arquivo novamente.");
+            filePath = GetFilePath();
         }
 
-        Console.WriteLine("Diretório do arquivo: " + directory);
-        Console.WriteLine("Nome do arquivo: " + fileName);
+        Console.WriteLine("Caminho do arquivo: " + filePath);
 
-        var patch = Path.Combine(directory, fileName);
-        var FilePatch = new FileData(patch);
-        var urls = FilePatch.ReadURLsFromFile();
+        List<URLData> urlDataList = await ProcessURLsFromFileAsync(filePath);
 
-        if (urls.Count() != 0)
+        if (urlDataList.Count != 0)
         {
-            var readers = new URLReader(urls).Read();
+            Console.WriteLine("Total de URLs encontradas no arquivo: " + urlDataList.Count);
+            Console.WriteLine("Gerando relatórios...");
 
-            Console.WriteLine("Total de URL's Encontradaas no arquivo:" + urls.Count());
+            FileData.GenerateTablePDF(URLData.FilterDuplicateURLs(urlDataList), Path.GetDirectoryName(filePath));
 
-            if (readers.Count != 0)
-            {
+            Console.WriteLine("\nMétodo concluído.");
 
-                Console.WriteLine("Gerando Relatórios");
-                FileData.GenerateTablePDF(URLData.FilterDuplicateURLs(readers), directory);
-
-              
-                Console.WriteLine("\nMétodo concluído.");
-
-              
-
-                PrintService.PrintUrls(readers);
-                PrintService.PrintSumForStatusCode(readers);
-                PrintService.PrintUrlsErrors(readers);
-            }
-            Console.WriteLine("Pressione qualquer tecla para encerrar...");
-            Console.ReadKey();
+            PrintService.PrintUrls(urlDataList);
+            PrintService.PrintSumForStatusCode(urlDataList);
+            PrintService.PrintUrlsErrors(urlDataList);
         }
+
+        Console.WriteLine("Pressione qualquer tecla para encerrar...");
+        Console.ReadKey();
     }
 
-    private static string GetDirectory()
+    private static string GetFilePath()
     {
-        Console.Write("Digite o diretório do arquivo com as URLs: ");
-        string directory = Console.ReadLine().Trim();
+        Console.Write("Digite o caminho do arquivo com as URLs: ");
+        string filePath = Console.ReadLine().Trim();
 
-        return directory;
+        return filePath;
     }
 
-    private static string GetFileName()
+    private static bool ValidateFile(string filePath)
     {
-        Console.Write("Digite o nome do arquivo: ");
-        string fileName = Console.ReadLine().Trim();
-
-        return fileName;
-    }
-    private static bool ValidateFile(string directory, string fileName)
-    {
-        string filePath = Path.Combine(directory, fileName);
-
-        if (!File.Exists(filePath))
-        {
+        if (!File.Exists(filePath) || Path.GetExtension(filePath) != ".txt")
             return false;
-        }
-
-        if (Path.GetExtension(fileName) != ".txt")
-        {
-            return false;
-        }
 
         string fileContent = File.ReadAllText(filePath);
 
         if (string.IsNullOrWhiteSpace(fileContent))
-        {
             return false;
-        }
 
         string[] urls = fileContent.Split(',');
 
         if (urls.Length == 0)
-        {
             return false;
-        }
 
         return true;
     }
 
-  
-
-    public static void UpdateLoading(int progress)
+    private static async Task<List<URLData>> ProcessURLsFromFileAsync(string filePath)
     {
-        Console.SetCursorPosition(0, Console.CursorTop);
-        Console.Write($"Progresso: {progress}%");
+        List<URLData> urlDataList = new();
+        string[] urls = File.ReadAllText(filePath).Split(',');
+
+        await Task.WhenAll(urls.Where(url => !string.IsNullOrWhiteSpace(url)).Select(async url =>
+        {
+            URLData urlData = await URLReader.ReadAsync(url);
+            lock (urlDataList)
+            {
+                urlDataList.Add(urlData);
+            }
+        }));
+
+        return urlDataList;
     }
 }
